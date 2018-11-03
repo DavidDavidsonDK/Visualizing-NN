@@ -1,0 +1,2 @@
+model_checkpoint_path: "/Users/davidkaraman/Desktop/Visualizing NN/Visualizing CNN/Visualizing-NN/Visualizing-LSTM/tensorboard/log/word_embeddings.ckpt"
+all_model_checkpoint_paths: "/Users/davidkaraman/Desktop/Visualizing NN/Visualizing CNN/Visualizing-NN/Visualizing-LSTM/tensorboard/log/word_embeddings.ckpt"
