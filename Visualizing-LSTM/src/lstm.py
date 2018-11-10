@@ -2,27 +2,8 @@ import tensorflow as tf
 import numpy as np 
 
 class LSTMLayer(object):    
-	def __init__(self, 
-				   sess,
-				   num_units, 
-				   hidden_layer_size,
-				   output_classes,
-				   embedding_dim,
-				   epoch,
-				   optimizer,
-				   learning_rate,
-				   batch_size,
-				   loss,
-				   eval_metric,
-				   reg_lambda,
-				   init_std,
-				   vocab_size,
-				   bidirectional=True,
-				   verbose=True ):
-		
-
+	def __init__(self, sess,num_units, hidden_layer_size,output_classes,embedding_dim,epoch,optimizer,learning_rate,batch_size,loss,eval_metric,reg_lambda,init_std,vocab_size,bidirectional=True,verbose=True ):
 		#TODO eval_metric,loss,optimizer not used
-
 		self.sess = sess
 		
 		self.lstm_params = {}
@@ -119,8 +100,6 @@ class LSTMLayer(object):
 		lbda = self.training_params['reg_lambda'] 
 		classes = self.lstm_params['output_classes']
 		
-		
-
 		#weights
 		Wxh_Left = self.left_encoder_weights['Wxh_Left']
 		bxh_Left = self.left_encoder_weights['bxh_Left']
@@ -165,7 +144,6 @@ class LSTMLayer(object):
 			
 			self.word_embd_lookup_rev = tf.manip.reverse(self.word_embd_lookup, axis = [-2], name = "embedding_lookup_rev") #None*T*e
 
-
 		for t in range(T):
 			
 			a = tf.reduce_sum(tf.slice(self.word_embd_lookup,[0,t,0],[-1,1,-1]),axis =1)
@@ -199,7 +177,6 @@ class LSTMLayer(object):
 				g = tf.tanh(tf.slice(self.gates_pre_Right[t], [0,d], [-1,d]))
 				self.gates_Right[t] = tf.concat([i,g,f,o],axis = -1)
 	
-				
 				i = tf.slice(self.gates_Right[t], [0,0], [-1,d])
 				g = tf.slice(self.gates_Right[t], [0,d], [-1,d])
 				f = tf.slice(self.gates_Right[t], [0,2*d], [-1,d])
@@ -209,14 +186,12 @@ class LSTMLayer(object):
 				self.h_Right[t]  = o*tf.tanh(self.c_Right[t])
 				
 
-
 		self.y_Left  = tf.matmul(self.h_Left[T-1], tf.transpose(Why_Left))
 		self.s = self.y_Left
 		if bi:
 			self.y_Right = tf.matmul(self.h_Right[T-1], tf.transpose(Why_Right))
 			self.s       = self.s + self.y_Right
 			
-		
 		self.sparse_cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.s,labels=self.y))
 		cost = self.sparse_cross_entropy + lbda*tf.nn.l2_loss(self.word_embeddings_matrix)
 		self.optimizer = tf.train.AdamOptimizer(self.training_params['learning_rate']).minimize(cost)
@@ -235,13 +210,7 @@ class LSTMLayer(object):
 			start = time()
 
 			for b_x, b_y in self.gen_batches(seqs, labels):
-				self.sess.run([self.optimizer],
-										feed_dict = {
-											 self.idxs:b_x,
-											 self.y:b_y,
-											 self.batch_size:b_x.shape[0]
-							  				})
-			
+				self.sess.run([self.optimizer],feed_dict = {self.idxs:b_x,self.y:b_y,self.batch_size:b_x.shape[0]})
 			
 			if verbose>0:
 				train_acc,train_loss  = self.evaluate(seqs, labels)
@@ -255,9 +224,7 @@ class LSTMLayer(object):
 	
 	def gen_batches(self, seqs, labels=None):
 		N = seqs.shape[0]
-
 		b_s = self.training_params['batch_size']
-
 		for i in range(0,N,b_s):
 		    idxces = range(i,i+b_s)
 		    if i+b_s >N:
@@ -265,7 +232,6 @@ class LSTMLayer(object):
 		            yield seqs[i:],labels[i:]
 		        else:
 		            yield seqs[i:]
-		    
 		    else:
 		        if labels is not None:
 		            yield seqs[idxces],labels[idxces]
@@ -276,32 +242,25 @@ class LSTMLayer(object):
 		out = []
 		w = np.array(w).reshape(-1, self.lstm_params['num_units'])
 		for b_x in self.gen_batches(w):
-		    
-		    scores = self.sess.run([self.s],
-		    		feed_dict={
-		                self.idxs: b_x,
-		                self.batch_size: b_x.shape[0]
-		             })
+		    scores = self.sess.run([self.s],feed_dict={self.idxs: b_x,self.batch_size: b_x.shape[0]})
 		    out.append(scores)
 		return np.vstack((out))
 	
 	def evaluate(self, data, labels):
-	  
-		total_loss = 0
-		total_acc = 0
+		total_loss,total_acc = 0,0
 		N = data.shape[0]
-
 		for b_x, b_y in self.gen_batches(data, labels):
-			acc, loss =  self.sess.run([self.accuracy,self.sparse_cross_entropy],
-										feed_dict = {
-											   self.idxs:b_x,
-											   self.y:b_y,
-											   self.batch_size:b_x.shape[0]
-													})
+			acc, loss =  self.sess.run([self.accuracy,self.sparse_cross_entropy],feed_dict = {self.idxs:b_x,self.y:b_y,self.batch_size:b_x.shape[0]})
 			total_acc += b_x.shape[0] * acc
 			total_loss += b_x.shape[0] * loss
 
-
 		return  total_acc/N, total_loss/N
+
+
+	def lrp_linear(self):
+		pass
+
+	def lrp(self):
+		pass
 
 
