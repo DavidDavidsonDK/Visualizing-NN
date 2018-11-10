@@ -1,26 +1,28 @@
 import tensorflow as tf
 import numpy as np 
 
-
 class LSTMLayer(object):    
-	def __init__(self, sess,
-					   num_units, 
-					   hidden_layer_size,
-					   output_classes,
-					   embedding_dim,
-					   epoch,
-					   optimizer,
-					   learning_rate,
-					   batch_size,
-					   loss,
-					   eval_metric,
-					   reg_lambda,
-					   init_std,
-					   vocab_size,
-					   bidirectional=True,
-					   verbose=True       
-				):
+	def __init__(self, 
+				   sess,
+				   num_units, 
+				   hidden_layer_size,
+				   output_classes,
+				   embedding_dim,
+				   epoch,
+				   optimizer,
+				   learning_rate,
+				   batch_size,
+				   loss,
+				   eval_metric,
+				   reg_lambda,
+				   init_std,
+				   vocab_size,
+				   bidirectional=True,
+				   verbose=True ):
 		
+
+		#TODO eval_metric,loss,optimizer not used
+
 		self.sess = sess
 		
 		self.lstm_params = {}
@@ -44,13 +46,9 @@ class LSTMLayer(object):
 		self.other_params['vocab_size'] = vocab_size
 		self.other_params['verbose'] = verbose
 
-
-		
-		
-		#self.__init_weights()
-		#self.__construct_graph()
 	
 	def load_weights(self, pretrained_weights = None, word_embeddings = None):
+		#Retrive weights
 		bi = self.lstm_params['bidirectional']
 		v_s = self.other_params['vocab_size']
 		e = self.lstm_params['embedding_dim']
@@ -134,8 +132,6 @@ class LSTMLayer(object):
 		self.y = tf.placeholder(dtype=tf.int32, shape = (None, classes), name = 'labels')#None*1
 		self.batch_size = tf.placeholder(dtype=tf.int32,name = 'batch_size')
 
-
-		
 		self.word_embd_lookup = tf.nn.embedding_lookup(self.word_embeddings_matrix, self.idxs,name='embedding_lookup')# None*T*e
 
 		shp = tf.stack([self.batch_size,tf.constant(d,dtype=tf.int32)],axis=0)
@@ -166,8 +162,6 @@ class LSTMLayer(object):
 			Whh_Right = self.right_encoder_weights['Whh_Right']
 			bhh_Right = self.right_encoder_weights['bhh_Right']
 			Why_Right = self.output_weights['Why_Right']
-
-
 			
 			self.word_embd_lookup_rev = tf.manip.reverse(self.word_embd_lookup, axis = [-2], name = "embedding_lookup_rev") #None*T*e
 
@@ -241,11 +235,12 @@ class LSTMLayer(object):
 			start = time()
 
 			for b_x, b_y in self.gen_batches(seqs, labels):
-				self.sess.run([self.optimizer],feed_dict = {
+				self.sess.run([self.optimizer],
+										feed_dict = {
 											 self.idxs:b_x,
 											 self.y:b_y,
 											 self.batch_size:b_x.shape[0]
-							  })
+							  				})
 			
 			
 			if verbose>0:
@@ -259,53 +254,54 @@ class LSTMLayer(object):
 	 
 	
 	def gen_batches(self, seqs, labels=None):
-        N = seqs.shape[0]
-        
-        b_s = self.training_params['batch_size']
-        
-        for i in range(0,N,b_s):
-            idxces = range(i,i+b_s)
-            if i+b_s >N:
-                if labels is not None:
-                    yield seqs[i:],labels[i:]
-                else:
-                    yield seqs[i:]
-            
-            else:
-                if labels is not None:
-                    yield seqs[idxces],labels[idxces]
-                else:
-                    yield seqs[idxces]
+		N = seqs.shape[0]
+
+		b_s = self.training_params['batch_size']
+
+		for i in range(0,N,b_s):
+		    idxces = range(i,i+b_s)
+		    if i+b_s >N:
+		        if labels is not None:
+		            yield seqs[i:],labels[i:]
+		        else:
+		            yield seqs[i:]
+		    
+		    else:
+		        if labels is not None:
+		            yield seqs[idxces],labels[idxces]
+		        else:
+		            yield seqs[idxces]
 	
 	def predict_scores(self, w):
-        out = []
-        w = np.array(w).reshape(-1, self.lstm_params['num_units'])
-        for b_x in self.gen_batches(w):
-            
-            scores = self.sess.run([self.s],feed_dict={
-                        self.idxs: b_x,
-                        self.batch_size: b_x.shape[0]
-                     })
-            out.append(scores)
-        return np.vstack((out))
+		out = []
+		w = np.array(w).reshape(-1, self.lstm_params['num_units'])
+		for b_x in self.gen_batches(w):
+		    
+		    scores = self.sess.run([self.s],
+		    		feed_dict={
+		                self.idxs: b_x,
+		                self.batch_size: b_x.shape[0]
+		             })
+		    out.append(scores)
+		return np.vstack((out))
 	
 	def evaluate(self, data, labels):
 	  
-	  total_loss = 0
-	  total_acc = 0
-	  N = data.shape[0]
-	  
-	  for b_x, b_y in self.gen_batches(data, labels):
-		acc, loss =  self.sess.run([self.accuracy,self.sparse_cross_entropy],feed_dict = {
-										   self.idxs:b_x,
-										   self.y:b_y,
-										   self.batch_size:b_x.shape[0]
-							})
-		total_acc += b_x.shape[0] * acc
-		total_loss += b_x.shape[0] * loss
-	  
-	  
-	  return  total_acc/N, total_loss/N
+		total_loss = 0
+		total_acc = 0
+		N = data.shape[0]
+
+		for b_x, b_y in self.gen_batches(data, labels):
+			acc, loss =  self.sess.run([self.accuracy,self.sparse_cross_entropy],
+										feed_dict = {
+											   self.idxs:b_x,
+											   self.y:b_y,
+											   self.batch_size:b_x.shape[0]
+													})
+			total_acc += b_x.shape[0] * acc
+			total_loss += b_x.shape[0] * loss
 
 
-	  
+		return  total_acc/N, total_loss/N
+
+
